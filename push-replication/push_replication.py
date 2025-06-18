@@ -864,9 +864,47 @@ class ArtifactoryHelper:
                             )
                         except Exception as e:
                             status = f"Error parsing status: {e}"
-                        table_data.append(
-                            [old_name, replication.get("url"), status, lastCompleted]
+
+                        # Get fileCount and size for source repo
+                        source_storage = self.rt1.local_storage.get(old_name, {})
+                        source_file_count = source_storage.get("filesCount", "N/A")
+                        source_size = source_storage.get("usedSpace", "N/A")
+
+                        # Get fileCount and size for target repo
+                        target_storage = self.rt2.local_storage.get(new_name, {})
+                        target_file_count = target_storage.get("filesCount", "N/A")
+                        target_size = target_storage.get("usedSpace", "N/A")
+
+                        # Extract only the target repo name from the URL
+                        target_repo_url = replication.get("url", "")
+                        target_repo_name = (
+                            target_repo_url.rstrip("/").split("/")[-1]
+                            if target_repo_url
+                            else ""
                         )
+                        # Only append a row if the target_repo_url is not a full URL (i.e., just the repo name)
+                        table_data.append(
+                            [
+                                old_name,
+                                target_repo_name,
+                                status,
+                                lastCompleted,
+                                source_file_count,
+                                source_size,
+                                target_file_count,
+                                target_size,
+                            ]
+                        )
+                        headers = [
+                            "Source Repo",
+                            "Target Repo URL",
+                            "Replication Status",
+                            "Last Completed",
+                            "Source File Count",
+                            "Source Size",
+                            "Target File Count",
+                            "Target Size",
+                        ]
                         success_msg = f"Replication status for {repo_type} repository {old_name} to target {new_name}: {status}"
                         print(success_msg)
                         thread_safe_log(success_msg, success_file)
