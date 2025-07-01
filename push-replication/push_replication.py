@@ -7,6 +7,7 @@ import argparse
 import json
 import threading
 import os
+import time
 
 from tabulate import tabulate
 
@@ -250,7 +251,7 @@ class Artifactory:
         }
         resp = requests.post(
             self.url + "/artifactory/api/storageinfo/calculate",
-            headers=headers,
+            headers=self.headers,
             verify=False,
         )
         if resp.status_code != 202:
@@ -794,6 +795,17 @@ class ArtifactoryHelper:
             "Last Completed",
         ]
 
+        sr_no = 0
+
+        # Refresh the storage summary on source and target instances
+        print("\nRefreshing storage summary on source and target instances...")
+        self.rt1.refresh_storage_summary()
+        self.rt2.refresh_storage_summary()
+
+        # Wait for a moment to ensure storage summary is refreshed
+        print("Waiting for 60 seconds for storage summary refresh...")
+        time.sleep(60)  # Wait for 60 seconds to ensure the storage summary is refreshed
+
         # Process each repository tuple
         for old_name, new_name in repo_valid_tuples:
             # Determine the repository type
@@ -882,9 +894,17 @@ class ArtifactoryHelper:
                             if target_repo_url
                             else ""
                         )
-                        # Only append a row if the target_repo_url is not a full URL (i.e., just the repo name)
+
+                        # Compare source and target file counts and set match status
+                        if source_file_count == target_file_count:
+                            file_count_match = "Yes"
+                        else:
+                            file_count_match = "No"
+
+                        sr_no += 1
                         table_data.append(
                             [
+                                sr_no,
                                 old_name,
                                 target_repo_name,
                                 status,
@@ -893,9 +913,11 @@ class ArtifactoryHelper:
                                 source_size,
                                 target_file_count,
                                 target_size,
+                                file_count_match,
                             ]
                         )
                         headers = [
+                            "Sr. No",
                             "Source Repo",
                             "Target Repo URL",
                             "Replication Status",
@@ -904,6 +926,7 @@ class ArtifactoryHelper:
                             "Source Size",
                             "Target File Count",
                             "Target Size",
+                            "File Count Match",
                         ]
                         success_msg = f"Replication status for {repo_type} repository {old_name} to target {new_name}: {status}"
                         print(success_msg)

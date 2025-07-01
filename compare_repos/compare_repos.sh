@@ -60,7 +60,7 @@ runtask() {
       while IFS= read -r line; do
         bname=$(echo $line | rev | cut -d"/" -f1 | rev)
         matched=false
-        if [[ "$line" =~ ^.npm|^.jfrog|^.pypi|^.composer|^index.yaml$|^versions$|_uploads$ ]]; then
+        if [[ "$line" =~ ^.npm|^.jfrog|^.pypi|^.composer|^index.yaml$|^versions$|^_uploads$ ]]; then
           matched=true;
         else
           for element in "${skippedfiles[@]}"; do
