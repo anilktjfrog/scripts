@@ -901,6 +901,21 @@ class ArtifactoryHelper:
                         else:
                             file_count_match = "No"
 
+                        # New column: Is source file count greater than target?
+                        if source_file_count != "N/A" and target_file_count != "N/A":
+                            try:
+                                source_count_int = int(source_file_count)
+                                target_count_int = int(target_file_count)
+                                source_greater_than_target = (
+                                    "Yes"
+                                    if source_count_int > target_count_int
+                                    else "No"
+                                )
+                            except Exception:
+                                source_greater_than_target = "N/A"
+                        else:
+                            source_greater_than_target = "N/A"
+
                         sr_no += 1
                         table_data.append(
                             [
@@ -914,6 +929,7 @@ class ArtifactoryHelper:
                                 target_file_count,
                                 target_size,
                                 file_count_match,
+                                source_greater_than_target,
                             ]
                         )
                         headers = [
@@ -927,6 +943,7 @@ class ArtifactoryHelper:
                             "Target File Count",
                             "Target Size",
                             "File Count Match",
+                            "Source > Target File Count",
                         ]
                         success_msg = f"Replication status for {repo_type} repository {old_name} to target {new_name}: {status}"
                         print(success_msg)
