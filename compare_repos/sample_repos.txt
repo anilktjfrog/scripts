@@ -1,0 +1,6 @@
+# Sample repository list file
+# Lines starting with # are comments and will be ignored
+# Empty lines are also ignored
+
+# Generic repositories
+test-repo-migrate
