@@ -5,15 +5,20 @@ JFrog Artifactory Repository Comparison Tool
 ===========================================
 
 This script compares artifacts between source and target JFrog Artifactory instances
-and generates transfer commands using curl instead of JFrog CLI.
+and generates transfer commands using curl or JFrog CLI.
 
 Features:
-- Compares files between source and target repositories
+- Compares files between ALL repository types (local, remote, virtual, federated)
 - Filters out auto-generated files
-- Generates curl-based transfer commands
+- Generates curl-based or JFrog CLI transfer commands
 - Supports parallel processing
 - Comprehensive logging
 - Configuration file support (required)
+
+Important Notes:
+- COMPARISON: Supports ALL repository types (local, remote, virtual, federated)
+- TRANSFER: Generated commands can only upload to LOCAL repositories on target
+- This is by design - you can compare any repo type but can only deploy to local repos
 
 Usage:
     python compare_repos.py --config config.json
@@ -429,8 +434,14 @@ class ArtifactoryComparer:
 
         try:
             while True:
+                # For remote repositories, append "-cache" to the repo name in AQL query
+                # This is because Artifactory stores remote repo artifacts in <repo>-cache internally
+                aql_repo_name = (
+                    f"{repo_name}-cache" if self.repo_type == "remote" else repo_name
+                )
+
                 # Construct AQL query with pagination
-                aql_query = f"""items.find({{"repo": "{repo_name}"}}).include("name", "path", "sha256").offset({offset}).limit({limit})"""
+                aql_query = f"""items.find({{"repo": "{aql_repo_name}"}}).include("name", "path", "sha256").offset({offset}).limit({limit})"""
 
                 self.logger.debug(f"AQL Query: {aql_query}")
                 self.logger.debug(f"Fetching batch: offset={offset}, limit={limit}")
@@ -659,7 +670,10 @@ class ArtifactoryComparer:
                 f.write(f"{i:6d}  {file_path}\n")
 
     def _generate_download_command(self, repo_name: str, file_path: str) -> str:
-        """Generate download command (curl or JFrog CLI) to download file from source server."""
+        """
+        Generate download command (curl or JFrog CLI) to download file from source server.
+        Note: Can download from any repository type (local, remote, virtual, federated).
+        """
         if self.command_type == "jfrog":
             return self._generate_jfrog_download_command(repo_name, file_path)
         else:
@@ -708,7 +722,11 @@ class ArtifactoryComparer:
         return " ".join(cmd_parts)
 
     def _generate_upload_command(self, repo_name: str, file_path: str) -> str:
-        """Generate upload command (curl or JFrog CLI) to upload file to target server."""
+        """
+        Generate upload command (curl or JFrog CLI) to upload file to target server.
+        Important: Upload commands will only work with LOCAL repositories on the target.
+        You cannot upload/deploy to remote
+        """
         if self.command_type == "jfrog":
             return self._generate_jfrog_upload_command(repo_name, file_path)
         else:
