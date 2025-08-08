@@ -1,0 +1,22 @@
+{
+    "source_server": "jpd1",
+    "target_server": "jpd2",
+    "servers": {
+        "jpd1": {
+            "url": "https://jpd1.jfrog.io/artifactory",
+            "token": "",
+            "username": "",
+            "password": ""
+        },
+        "jpd2": {
+            "url": "https://jpd2.jfrog.io/artifactory",
+            "token": "",
+            "username": "",
+            "password": ""
+        }
+    },
+    "parallel_workers": 5,
+    "request_timeout": 30,
+    "retry_attempts": 3,
+    "log_level": "INFO"
+}

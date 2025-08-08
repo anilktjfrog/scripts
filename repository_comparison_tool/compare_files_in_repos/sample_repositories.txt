@@ -1,0 +1,19 @@
+# Sample repository list file for JFrog repository comparison
+# Lines starting with # are comments and will be ignored
+# Empty lines are also ignored
+
+# Production repositories
+maven-local
+npm-local
+docker-local
+
+# Development repositories
+maven-dev-local
+npm-dev-local
+
+# Generic repositories
+generic-local
+pypi-local
+
+# Test repository
+test-local
