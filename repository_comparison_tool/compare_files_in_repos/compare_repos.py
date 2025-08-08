@@ -475,6 +475,10 @@ class ArtifactoryComparer:
                     else:
                         full_path = name
 
+                    # Skip files that should be ignored (filter during AQL processing)
+                    if self.should_skip_file(full_path):
+                        continue
+
                     batch_files.append((full_path, sha256))
 
                 all_files.extend(batch_files)
@@ -514,8 +518,18 @@ class ArtifactoryComparer:
                 for file_path, sha256 in sample_files:
                     self.logger.debug(f"  {file_path} (SHA256: {sha256[:16]}...)")
 
+            # Log filtering statistics
+            original_total = total_files if total_files else 0
+            filtered_total = len(all_files)
+            skipped_count = original_total - filtered_total
+
+            if skipped_count > 0:
+                self.logger.info(
+                    f"Filtered out {skipped_count} auto-generated files during AQL processing"
+                )
+
             self.logger.info(
-                f"Successfully fetched {len(all_files)} files from {repo_name}"
+                f"Successfully fetched {filtered_total} files from {repo_name} (after filtering)"
             )
             return all_files
 
@@ -582,11 +596,8 @@ class ArtifactoryComparer:
             # Find files that are in source but not in target (or have different checksums)
             diff_files = source_set - target_set
 
-            # Filter out files that should be skipped
-            filtered_diff_files = []
-            for file_path, sha256 in diff_files:
-                if not self.should_skip_file(file_path):
-                    filtered_diff_files.append(file_path)
+            # Extract just the file paths (files are already filtered during AQL processing)
+            diff_file_paths = [file_path for file_path, sha256 in diff_files]
 
             # Generate results
             result = {
@@ -594,8 +605,8 @@ class ArtifactoryComparer:
                 "total_source_files": len(source_files),
                 "total_target_files": len(target_files),
                 "total_diff_files": len(diff_files),
-                "filtered_diff_files": len(filtered_diff_files),
-                "diff_files": filtered_diff_files,
+                "filtered_diff_files": len(diff_file_paths),
+                "diff_files": diff_file_paths,
             }
 
             # Write results to files
@@ -603,7 +614,7 @@ class ArtifactoryComparer:
 
             self.logger.info(
                 f"Repository {repo_name} comparison completed. "
-                f"Found {len(filtered_diff_files)} files to transfer"
+                f"Found {len(diff_file_paths)} files to transfer"
             )
 
             return result
