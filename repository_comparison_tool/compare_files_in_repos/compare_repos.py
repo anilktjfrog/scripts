@@ -255,7 +255,12 @@ class ArtifactoryComparer:
     ) -> requests.Response:
         """Make HTTP request to JFrog Artifactory API."""
         server_config = self.config["servers"][server_id]
-        url = urljoin(server_config["url"], endpoint)
+
+        # Properly join base URL with endpoint to handle /artifactory paths correctly
+        base_url = server_config["url"].rstrip("/")
+        endpoint = endpoint.lstrip("/")
+        url = f"{base_url}/{endpoint}"
+
         headers = self._get_auth_headers(server_id)
 
         timeout = self.config.get("request_timeout", 30)
@@ -553,7 +558,9 @@ class ArtifactoryComparer:
         Returns:
             Dictionary containing comparison results
         """
+        self.logger.info("-" * 60)
         self.logger.info(f"Comparing repository: {repo_name}")
+        self.logger.info("-" * 60)
 
         try:
             # Create output directory for this repository
@@ -629,14 +636,10 @@ class ArtifactoryComparer:
                 # Generate commands for download and upload
                 download_cmd = self._generate_download_command(repo_name, file_path)
                 upload_cmd = self._generate_upload_command(repo_name, file_path)
+                cleanup_cmd = f'rm -f "{os.path.basename(file_path)}"'
 
-                if self.command_type == "jfrog":
-                    # For JFrog CLI, we can chain commands differently
-                    f.write(f"{download_cmd} && {upload_cmd}\n")
-                else:
-                    # For curl commands, include cleanup
-                    cleanup_cmd = f'rm -f "{os.path.basename(file_path)}"'
-                    f.write(f"{download_cmd} && {upload_cmd} && {cleanup_cmd}\n")
+                # Chain commands with cleanup for both curl and JFrog CLI
+                f.write(f"{download_cmd} && {upload_cmd} && {cleanup_cmd}\n")
 
         # Append to full list log
         fulllist_path = Path(self.output_dir) / "fulllist.log"
@@ -677,7 +680,7 @@ class ArtifactoryComparer:
         """Generate JFrog CLI command to download file from source server."""
         source_server = self.config["source_server"]
 
-        # JFrog CLI download command format: jf rt download --server-id=<server> <source_path> <target_path>
+        # JFrog CLI download command format: jf rt download --server-id=<server> --flat=true <source_path> <target_path>
         source_path = f"{repo_name}/{file_path}"
         target_path = os.path.basename(file_path)
 
@@ -686,6 +689,7 @@ class ArtifactoryComparer:
             "rt",
             "download",
             f"--server-id={source_server}",
+            "--flat=true",
             f'"{source_path}"',
             f'"{target_path}"',
         ]
